@@ -1,0 +1,27 @@
+# --- Azure SDKs ---
+azure-identity>=1.19.0
+azure-storage-blob>=12.23.0
+azure-search-documents>=11.5.2
+azure-ai-documentintelligence>=1.0.0
+azure-ai-projects>=1.0.0b10
+openai>=1.54.0
+
+# --- Document parsing & chunking ---
+docling>=2.7.0
+tiktoken>=0.8.0
+
+# --- LangGraph orchestration ---
+langgraph>=0.2.50
+langchain-openai>=0.2.10
+langchain-core>=0.3.20
+
+# --- Frontends ---
+chainlit>=1.3.0
+typer>=0.13.0
+rich>=13.9.0
+
+# --- Notebooks & utilities ---
+jupyter>=1.1.0
+pandas>=2.2.0
+python-dotenv>=1.0.1
+pydantic>=2.9.0

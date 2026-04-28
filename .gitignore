@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.chainlit/.files/
+.chainlit/translations/
+chainlit.db
+.files/
+traces.jsonl
+eval_results.jsonl
+.claude/
+.DS_Store

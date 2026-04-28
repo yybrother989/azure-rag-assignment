@@ -1,0 +1,48 @@
+CUSTOMER PAYMENT DATA STORAGE POLICY
+Effective 2024-06-15. Owner: Security & Compliance. Compliance basis: PCI-DSS v4.0.
+
+1. Scope
+Applies to ALL customer payment-card data handled by company systems,
+whether transmitted, processed, or stored. Includes web checkout flows,
+mobile checkout flows, batch import from partner systems, and any
+exported reports that touch payment data.
+
+2. What we may store
+
+   2.1 Tokenised PAN (Primary Account Number): YES, only the token issued
+       by our PCI-compliant payment processor. Never the raw PAN.
+
+   2.2 Last 4 digits of the PAN: YES, for receipts and customer service.
+
+   2.3 Cardholder name: YES, encrypted at rest.
+
+   2.4 Card expiry date: YES, encrypted at rest.
+
+3. What we MUST NEVER store
+
+   3.1 Raw (un-tokenised) PAN — under any circumstance.
+   3.2 CVV / CVC / CID — the 3- or 4-digit security code. NEVER stored
+       after the authorising transaction completes, even encrypted.
+   3.3 Magnetic stripe track data, EMV chip cryptograms, PIN, or PIN block.
+   3.4 Card data in plain-text logs, email, Slack, ticketing systems, or
+       analytics events.
+
+4. Encryption requirements
+All data permitted under section 2 must be encrypted AT REST using
+AES-256-GCM with keys held in the company HSM (Hardware Security Module).
+Keys are rotated every 12 months. Decryption is only authorised within
+the payment-service boundary; no other service may hold a decryption key.
+
+5. Access controls
+Access to the payment-service decryption keys is restricted to the
+on-call SRE rotation and the Payments team lead. All access is logged
+to the immutable audit store and reviewed weekly.
+
+6. Data retention
+Tokenised payment data is retained for 7 years for tax and dispute
+purposes, then irreversibly deleted. See the broader Data Retention
+Policy for non-payment data.
+
+7. Incident response
+Any suspected exposure of cardholder data is a P0 incident. Page the
+on-call Security lead within 15 minutes of detection.

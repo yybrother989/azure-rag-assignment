@@ -1,0 +1,37 @@
+FIRMWARE UPDATE MAINTENANCE WINDOW POLICY
+Effective 2025-02-01. Owner: Field Operations.
+
+1. Production fleet update window
+All firmware updates to production-deployed Device Alpha and Device Bravo
+units MUST be scheduled within the approved maintenance window:
+
+   - Day:  Sunday
+   - Time: 02:00 - 06:00 customer-local time
+   - Frequency: at most one update per device per calendar week
+
+Updates outside this window require a CAB (Change Advisory Board)
+exception ticket with at least 48 hours' notice.
+
+2. Staged rollout
+Production firmware updates are rolled out in three rings:
+
+   Ring 0 (Canary):     1% of fleet, 24 hours soak.
+   Ring 1 (Early):      10% of fleet, 48 hours soak.
+   Ring 2 (General):    remaining 89% of fleet.
+
+A regression in any ring halts promotion to the next.
+
+3. Rollback
+Every update must ship with a tested rollback path. If a customer reports
+a regression on the new firmware within 7 days of their device entering
+Ring 2, Field Ops will roll that customer's device back at no charge,
+within the same maintenance window.
+
+4. Test devices
+Internal test units and lab fixtures are NOT bound by this policy.
+Engineers may push experimental firmware to lab devices at any time.
+
+5. Notification
+Customers on a paid support tier are notified 7 days in advance of each
+production firmware push, with the changelog and the maintenance window
+they will fall into based on their fleet ring assignment.

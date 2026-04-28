@@ -1,0 +1,38 @@
+DATA RETENTION POLICY
+Effective 2025-01-01. Owner: Security & Compliance.
+
+1. Scope
+This policy covers all logs, telemetry, and user activity records produced by
+company-operated systems and devices (Device Alpha, Device Bravo, the web
+console, and any internal service that emits structured log data).
+
+2. Retention windows
+
+   2.1 User activity logs (web console actions, API calls, login events):
+       retained for 90 DAYS in hot storage, then permanently deleted.
+
+   2.2 Device telemetry (sensor readings, health metrics):
+       retained for 365 DAYS in cold storage. After 365 days the records are
+       irreversibly deleted.
+
+   2.3 Personally Identifiable Information (PII) embedded in any of the above:
+       retained for AT MOST 30 DAYS, regardless of the surrounding record's
+       retention class. PII includes names, email addresses, phone numbers,
+       IP addresses tied to an identified user, and physical addresses.
+
+   2.4 Security audit trails (authentication failures, privileged operations,
+       configuration changes): retained for 2 YEARS to satisfy SOC 2 controls.
+
+3. Deletion mechanism
+Deletion is performed by a daily job (03:00 UTC) that purges records older
+than the policy windows above. Deletion is irreversible: there is no
+"trash" period and no recoverable backup of expired records.
+
+4. Exceptions
+The Security team may issue a Legal Hold to extend retention for specific
+records during investigations. Legal holds are tracked in the GRC system and
+override the retention windows above for the duration of the hold.
+
+5. Review
+This policy is reviewed annually by Security & Compliance and may be amended
+to reflect regulatory changes.
