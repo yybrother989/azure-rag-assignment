@@ -19,6 +19,7 @@ langchain-core>=0.3.20
 chainlit>=1.3.0
 typer>=0.13.0
 rich>=13.9.0
+prompt_toolkit>=3.0.40
 
 # --- Notebooks & utilities ---
 jupyter>=1.1.0

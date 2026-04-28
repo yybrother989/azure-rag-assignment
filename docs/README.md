@@ -1,6 +1,6 @@
 # Azure Observable RAG
 
-> **Status: verified end-to-end.** Provisioned in `swedencentral`, ingested 9 sample docs (2 PDF / 3 MD / 4 TXT) into 26 chunks, demonstrated all three frontends (Chainlit / Rich CLI / notebook). Full LangGraph query (intent → plan → retrieve → select → generate → cite) returns a grounded answer in **~4 sec**. Out-of-scope queries short-circuit in **~1 ms** with no LLM cost. Total Azure spend during build + demo: **well under $1 USD** of trial credit.
+> **Status: verified end-to-end.** Provisioned in `swedencentral`, ingested 9 sample docs (2 PDF / 3 MD / 4 TXT) into 26 chunks, demonstrated all four frontends (Chainlit / `cli chat` REPL / `cli ask` one-shot / notebook). Full LangGraph query (intent → plan → retrieve → select → generate → cite) returns a grounded answer in **~4 sec** with live token streaming. Out-of-scope queries short-circuit in **~1 ms** with no LLM cost. Multi-turn follow-ups in `cli chat` work end-to-end — *"what about Device B?"* gets correctly rewritten to *"How to factory reset Device Beta?"* by the planner using prior-turn context. Total Azure spend during build + demo: **well under $1 USD** of trial credit.
 
 A retrieval-augmented search system over a mixed-format Azure Blob knowledge base (PDF / Markdown / TXT), built as an explicit, auditable **LangGraph DAG** instead of a black-box chatbot. Every retrieval and generation decision is captured as a typed trace object that is rendered in three frontends (Chainlit step UI, Rich CLI, Jupyter notebook) and consumed by an evaluation harness — *the same payload, three views*.
 
@@ -129,18 +129,24 @@ python -m src.cli ingest
 
 Walks `data/` → uploads to blob → extracts text via Docling → chunks with `HybridChunker` → embeds → upserts into the `kb-chunks` AI Search index. Re-running is idempotent (chunk IDs are content hashes).
 
-### 5. Ask — three frontends
+### 5. Ask — four frontends
+
+**`cli chat` — interactive REPL (Claude-Code-style):**
+```bash
+python -m src.cli chat
+```
+Persistent session with **multi-turn memory** (a follow-up like *"what about Device B?"* sees the prior turn's context), live token streaming, compact 1-line node status indicators, slash commands (`/help`, `/cost`, `/trace`, `/sources`, `/clear`, `/topk`, `/model`, `/save`, `/exit`), and a status footer showing model + cumulative tokens + USD spend. Up-arrow recalls previous queries from `~/.azure_rag_history`.
 
 **Chainlit (browser, step-by-step UI):**
 ```bash
 chainlit run src/app.py
 ```
 
-**CLI (Rich panels, screenshot- and SSH-friendly):**
+**`cli ask` — one-shot CLI (Rich panels, screenshot- and SSH-friendly):**
 ```bash
 python -m src.cli ask "How do I factory-reset Device A?"
-python -m src.cli ask "..." --json | jq            # raw FinalRagTrace JSON
-python -m src.cli search "reset device A" --top-k 5    # retrieval ONLY, no LLM
+python -m src.cli ask "..." --json | jq                  # raw FinalRagTrace JSON
+python -m src.cli search "reset device A" --top-k 5      # retrieval ONLY, no LLM
 ```
 
 **Notebook (per-stage tables):** open [`notebooks/demo.ipynb`](../notebooks/demo.ipynb).

@@ -16,10 +16,11 @@ Flow:
 from __future__ import annotations
 
 import json
+import operator
 import os
 import time
 import uuid
-from typing import Any, Callable, TypedDict
+from typing import Annotated, Any, Callable, TypedDict
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
@@ -73,6 +74,11 @@ OUT_OF_SCOPE_REPLY = (
 
 class RagState(TypedDict, total=False):
     user_query: str
+    # conversation_history: list of {"role": "user"|"assistant", "content": str, "chunk_ids": list[str]}.
+    # The operator.add reducer appends new entries instead of replacing the list, so each turn's
+    # response_formatter can yield only the latest pair and LangGraph's checkpointer accumulates
+    # the full session history per thread_id.
+    conversation_history: Annotated[list[dict], operator.add]
     query_plan: dict          # QueryPlanTrace as dict
     retrieval: dict           # RetrievalTrace as dict
     evidence: dict            # EvidenceSelectionTrace as dict
@@ -81,6 +87,26 @@ class RagState(TypedDict, total=False):
     final_trace: dict         # FinalRagTrace as dict
     started_at: float
     retrieval_results: list   # RetrievalResult objects, kept for evidence_selector & generator
+
+
+HISTORY_TURNS_FOR_PROMPT = 3      # how many recent turns to inject into router/planner/generator prompts
+HISTORY_CONTENT_TRUNCATE = 400    # per-entry char cap so prompts don't bloat
+
+
+def _format_history(history: list[dict]) -> str:
+    """Render the last few turns for prompt injection. Empty string if no history."""
+    if not history:
+        return ""
+    # Each turn = 2 entries (user + assistant), so take 2 * HISTORY_TURNS_FOR_PROMPT.
+    recent = history[-HISTORY_TURNS_FOR_PROMPT * 2 :]
+    lines = []
+    for entry in recent:
+        role = entry.get("role", "?").upper()
+        content = entry.get("content", "")
+        if len(content) > HISTORY_CONTENT_TRUNCATE:
+            content = content[:HISTORY_CONTENT_TRUNCATE] + "…"
+        lines.append(f"{role}: {content}")
+    return "\n".join(lines)
 
 
 # ---------- node implementations ----------
@@ -97,9 +123,23 @@ def _llm_json(system: str, user: str) -> dict:
     return json.loads(resp.choices[0].message.content)
 
 
+def _with_history(query: str, history: list[dict]) -> str:
+    """Wrap the user query with a recent-conversation block when history exists."""
+    block = _format_history(history)
+    if not block:
+        return query
+    return (
+        "<recent_conversation>\n"
+        f"{block}\n"
+        "</recent_conversation>\n\n"
+        f"Current user input: {query}"
+    )
+
+
 def intent_router(state: RagState) -> dict:
     query = state["user_query"]
-    parsed = _llm_json(ROUTER_SYSTEM, query)
+    history = state.get("conversation_history", [])
+    parsed = _llm_json(ROUTER_SYSTEM, _with_history(query, history))
     intent = parsed.get("intent", "general_kb")
     if intent not in INTENT_TO_CATEGORY:
         intent = "general_kb"
@@ -119,7 +159,8 @@ def intent_router(state: RagState) -> dict:
 
 def query_planner(state: RagState) -> dict:
     plan = state["query_plan"]
-    parsed = _llm_json(PLANNER_SYSTEM, plan["original_query"])
+    history = state.get("conversation_history", [])
+    parsed = _llm_json(PLANNER_SYSTEM, _with_history(plan["original_query"], history))
     rewritten = parsed.get("rewritten_query", plan["original_query"]).strip() or plan["original_query"]
     plan = {**plan, "rewritten_query": rewritten}
     return {"query_plan": plan}
@@ -142,21 +183,23 @@ def retriever_node(state: RagState) -> dict:
         results=results,
         latency_ms=latency_ms,
     )
-    return {"retrieval": _dataclass_to_dict(trace), "retrieval_results": results}
+    # Store as dicts (not RetrievalResult dataclass instances) so LangGraph's
+    # msgpack-based checkpointer can serialize the state without registering custom types.
+    return {"retrieval": _dataclass_to_dict(trace), "retrieval_results": [r.to_dict() for r in results]}
 
 
 def evidence_selector(state: RagState) -> dict:
-    results: list[RetrievalResult] = state["retrieval_results"]
+    results: list[dict] = state["retrieval_results"]   # dicts, not dataclasses
     n = int(os.environ.get("EVIDENCE_TOP_N", "4"))
 
     # Prefer reranker_score where available (semantic mode); fall back to score.
-    def sort_key(r: RetrievalResult):
-        return r.reranker_score if r.reranker_score is not None else r.score
+    def sort_key(r: dict):
+        return r["reranker_score"] if r.get("reranker_score") is not None else r["score"]
 
     ranked = sorted(results, key=sort_key, reverse=True)[:n]
     trace = EvidenceSelectionTrace(
         candidate_count=len(results),
-        selected_chunk_ids=[r.chunk_id for r in ranked],
+        selected_chunk_ids=[r["chunk_id"] for r in ranked],
         selection_strategy="top_n_by_reranker_then_score",
         rationale=f"Picked top {len(ranked)} of {len(results)} by reranker_score, falling back to score",
     )
@@ -164,11 +207,17 @@ def evidence_selector(state: RagState) -> dict:
 
 
 def generator_node(state: RagState, config: RunnableConfig) -> dict:
-    selected: list[RetrievalResult] = state["retrieval_results"]
+    # Re-hydrate from dicts (see retriever_node note about checkpoint serialization).
+    selected: list[RetrievalResult] = [RetrievalResult(**r) for r in state["retrieval_results"]]
     handler = (config.get("configurable") or {}).get("stream_handler")
+    history = state.get("conversation_history", [])
+    rewritten = state["query_plan"]["rewritten_query"]
+    # If we have prior turns, prefix them so the generator can resolve pronouns
+    # ("it", "that one", "for the other device") against the actual prior exchange.
+    contextual_query = _with_history(rewritten, history) if history else rewritten
     t0 = time.perf_counter()
     out: GenerationOutput = generate_grounded_answer(
-        query=state["query_plan"]["rewritten_query"],
+        query=contextual_query,
         selected_chunks=selected,
         stream_handler=handler,
     )
@@ -189,6 +238,9 @@ def response_formatter(state: RagState) -> dict:
     plan = state["query_plan"]
     started = state.get("started_at", time.perf_counter())
     total_ms = int((time.perf_counter() - started) * 1000)
+
+    # Build the user-side history entry once; assistant entry differs by branch below.
+    user_entry = {"role": "user", "content": plan["original_query"], "chunk_ids": []}
 
     if plan["intent"] == "out_of_scope":
         # Build a minimal trace — retrieval/evidence/generation are absent.
@@ -212,7 +264,12 @@ def response_formatter(state: RagState) -> dict:
             total_latency_ms=total_ms,
         )
         emit_trace_jsonl(final)
-        return {"final_message": OUT_OF_SCOPE_REPLY, "final_trace": final.to_dict()}
+        assistant_entry = {"role": "assistant", "content": OUT_OF_SCOPE_REPLY, "chunk_ids": []}
+        return {
+            "final_message": OUT_OF_SCOPE_REPLY,
+            "final_trace": final.to_dict(),
+            "conversation_history": [user_entry, assistant_entry],
+        }
 
     final = FinalRagTrace(
         user_query=plan["original_query"],
@@ -223,7 +280,17 @@ def response_formatter(state: RagState) -> dict:
         total_latency_ms=total_ms,
     )
     emit_trace_jsonl(final)
-    return {"final_message": state["generation"]["answer"], "final_trace": final.to_dict()}
+    gen = state["generation"]
+    assistant_entry = {
+        "role": "assistant",
+        "content": gen["answer"],
+        "chunk_ids": [c["chunk_id"] for c in gen.get("citations", [])],
+    }
+    return {
+        "final_message": gen["answer"],
+        "final_trace": final.to_dict(),
+        "conversation_history": [user_entry, assistant_entry],
+    }
 
 
 # ---------- helpers ----------
