@@ -12,3 +12,7 @@ Every claim in the final answer is grounded in retrieved chunks and cited back t
 - *What's our policy on storing customer payment data?*
 
 Out-of-scope queries (e.g. *"tell me a joke"*) short-circuit through the conditional edge in the graph — no LLM cost, ~1 ms response.
+
+## Browse the corpus
+
+Type **`files`** to see every document indexed (and any blob uploaded but not yet ingested). Cited sources also auto-attach to each answer — click the file card under the answer to open the original PDF / MD / TXT in the side panel and verify the citation.
