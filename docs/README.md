@@ -17,44 +17,79 @@ The reviewer can audit the full path of any query: which intent the router picke
 ## Architecture
 
 ```mermaid
-flowchart TD
-    %% Ingestion
-    blob[(Azure Blob Storage<br/>kb-docs container)]
-    extract["extract.py<br/>Docling (+ Azure DI fallback)"]
-    chunk["chunk.py<br/>Docling HybridChunker"]
-    embed["embed.py<br/>Azure OpenAI<br/>text-embedding-3-small"]
-    index[("Azure AI Search<br/>kb-chunks index<br/>BM25 + HNSW + semantic")]
+flowchart TB
+    %% ============== INGESTION (one-shot per corpus) ==============
+    subgraph INGEST [" 📥 Ingestion Pipeline (one-shot)"]
+        direction LR
+        blob[("Blob Storage<br/>kb-docs")]:::azure
+        extract["extract.py<br/><i>Docling + DI fallback</i>"]:::code
+        chunkP["chunk.py<br/><i>HybridChunker</i>"]:::code
+        embedP["embed.py<br/><i>text-embedding-3-small</i>"]:::code
+        blob --> extract --> chunkP --> embedP
+    end
 
-    blob --> extract --> chunk --> embed --> index
+    %% ============== AZURE MANAGED SERVICES (always-on) ==============
+    subgraph AZ [" ☁️ Azure Managed Services"]
+        direction TB
+        index[("AI Search<br/><i>kb-chunks · BM25 + HNSW + L2 semantic</i>")]:::azure
+        foundry[/"AI Foundry Project<br/><i>kb-rag-project</i>"/]:::azure
+        aoai["AI Services Account<br/><i>gpt-4o + text-embedding-3-small<br/>AAD-authed</i>"]:::azure
+        foundry -.governs.- aoai
+    end
 
-    %% Query path (LangGraph DAG)
-    user([User query])
-    router[intent_router]
-    planner[query_planner]
-    retriever[retriever_node<br/>↳ search.py hybrid_search]
-    selector[evidence_selector]
-    generator[generator_node<br/>↳ generate.py grounded answer]
-    formatter[response_formatter<br/>↳ FinalRagTrace]
-    answer([Cited answer])
+    embedP -. upsert .-> index
+
+    %% ============== QUERY PATH (LangGraph DAG) ==============
+    user([👤 User query]):::user
+
+    subgraph LG [" 🧠 LangGraph DAG (per query, ~4 sec)"]
+        direction TB
+        router{{"① intent_router<br/><i>JSON-mode classify</i>"}}:::node
+        planner[["② query_planner<br/><i>JSON-mode rewrite</i>"]]:::node
+        retriever[["③ retriever_node<br/><i>↳ search.py</i>"]]:::node
+        selector[["④ evidence_selector<br/><i>top-N by reranker_score</i>"]]:::node
+        generator[["⑤ generator_node<br/><i>↳ generate.py grounded</i>"]]:::node
+        formatter[["⑥ response_formatter<br/><i>↳ FinalRagTrace</i>"]]:::node
+
+        router -- in_scope --> planner --> retriever --> selector --> generator --> formatter
+        router -. out_of_scope (1ms, no LLM) .-> formatter
+    end
 
     user --> router
-    router -->|in_scope| planner --> retriever
-    retriever --> selector --> generator --> formatter --> answer
-    router -.->|out_of_scope| formatter
+    retriever -.queries.-> index
+    generator -.calls.-> aoai
 
-    index -.serves.- retriever
+    answer([💬 Cited answer]):::user
+    formatter --> answer
 
-    %% Frontends
-    chainlit{{Chainlit UI<br/>step-by-step panels}}
-    cli{{CLI<br/>Typer + Rich, --pretty / --json}}
-    notebook{{demo.ipynb<br/>per-stage tables}}
-    eval{{eval.ipynb<br/>recall@k, MRR,<br/>groundedness, relevance}}
+    %% ============== FRONTENDS / CONSUMERS (same trace shape) ==============
+    subgraph FE [" 🖥️ Frontends + Eval (consume FinalRagTrace)"]
+        direction LR
+        chainlit{{"Chainlit UI<br/><i>step panels in browser</i>"}}:::frontend
+        cli{{"CLI (Typer + Rich)<br/><i>--pretty / --json</i>"}}:::frontend
+        notebook{{"demo.ipynb<br/><i>per-stage tables</i>"}}:::frontend
+        evalNB{{"eval.ipynb<br/><i>recall@k · groundedness</i>"}}:::frontend
+    end
 
     formatter --> chainlit
     formatter --> cli
     formatter --> notebook
-    formatter --> eval
+    formatter --> evalNB
+
+    %% ============== Lucidchart-style theming ==============
+    classDef azure fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
+    classDef code fill:#F3E5F5,stroke:#6A1B9A,stroke-width:1.5px,color:#311B92
+    classDef node fill:#E8F5E9,stroke:#2E7D32,stroke-width:1.5px,color:#1B5E20
+    classDef frontend fill:#FFF3E0,stroke:#E65100,stroke-width:1.5px,color:#BF360C
+    classDef user fill:#FAFAFA,stroke:#424242,stroke-width:2px,color:#212121
+
+    style INGEST fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:3 3,color:#424242
+    style AZ fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:3 3,color:#424242
+    style LG fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:3 3,color:#424242
+    style FE fill:#FAFAFA,stroke:#9E9E9E,stroke-dasharray:3 3,color:#424242
 ```
+
+The diagram uses **subgraphs as swimlanes** (one per concern: ingestion, Azure resources, LangGraph DAG, frontends) and **color-coded node classes** (Azure managed = blue, Python module = purple, LangGraph node = green, frontend = orange). Solid edges are runtime data flow; dotted edges are cross-lane references (search index lookups, model calls). Renders directly in GitHub's Mermaid integration — no external diagramming tool.
 
 ## Quickstart
 
