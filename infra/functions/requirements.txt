@@ -1,0 +1,13 @@
+# Function App runtime requirements (subset of repo requirements.txt — only
+# what the blob trigger needs; NOT chainlit / langgraph / etc.).
+azure-functions
+azure-identity
+azure-storage-blob
+azure-search-documents
+azure-ai-documentintelligence
+azure-monitor-opentelemetry
+openai
+langchain-text-splitters
+tiktoken
+pillow
+pypdfium2

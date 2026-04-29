@@ -13,8 +13,9 @@ the same index state and query embedding.
 
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from azure.search.documents.models import (
     QueryAnswerType,
@@ -44,7 +45,17 @@ class RetrievalResult:
     file_type: str
     category: str
     page_number: int | None
+    page_end: int | None
     heading_path: str | None
+    scope: str = "device"
+    device_family: str | None = None
+    device: str | None = None
+    doc_type: str | None = None
+    topic: str | None = None
+    version: str | None = None
+    is_shared: bool = False
+    tables: list[dict] = field(default_factory=list)
+    figures: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -101,7 +112,9 @@ def hybrid_search(
 
     select_fields = [
         "chunk_id", "content", "doc_id", "source_path", "file_name",
-        "file_type", "category", "page_number", "heading_path",
+        "file_type", "category", "page_number", "page_end", "heading_path",
+        "tables_json", "figures_json",
+        "scope", "device_family", "device", "doc_type", "topic", "version", "is_shared",
     ]
 
     kwargs: dict = {
@@ -137,6 +150,16 @@ def hybrid_search(
     results: list[RetrievalResult] = []
     for rank, doc in enumerate(raw, start=1):
         content = doc.get("content", "") or ""
+        tables_json = doc.get("tables_json") or ""
+        figures_json = doc.get("figures_json") or ""
+        try:
+            tables = json.loads(tables_json) if tables_json else []
+        except json.JSONDecodeError:
+            tables = []
+        try:
+            figures = json.loads(figures_json) if figures_json else []
+        except json.JSONDecodeError:
+            figures = []
         results.append(
             RetrievalResult(
                 rank=rank,
@@ -155,7 +178,17 @@ def hybrid_search(
                 file_type=doc.get("file_type", ""),
                 category=doc.get("category", ""),
                 page_number=doc.get("page_number"),
+                page_end=doc.get("page_end"),
                 heading_path=doc.get("heading_path"),
+                scope=doc.get("scope", "device"),
+                device_family=doc.get("device_family"),
+                device=doc.get("device"),
+                doc_type=doc.get("doc_type"),
+                topic=doc.get("topic"),
+                version=doc.get("version"),
+                is_shared=bool(doc.get("is_shared", False)),
+                tables=tables,
+                figures=figures,
             )
         )
     return results

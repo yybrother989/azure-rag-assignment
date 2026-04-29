@@ -81,8 +81,30 @@ def _build_index() -> SearchIndex:
         SimpleField(name="file_type", type=SearchFieldDataType.String, filterable=True, facetable=True),
         SimpleField(name="category", type=SearchFieldDataType.String, filterable=True, facetable=True),
         SimpleField(name="page_number", type=SearchFieldDataType.Int32, filterable=True, retrievable=True),
+        SimpleField(name="page_end", type=SearchFieldDataType.Int32, filterable=True, retrievable=True),
         SearchableField(name="heading_path", type=SearchFieldDataType.String, filterable=True),
         SimpleField(name="chunk_index", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
+        # Metadata-first retrieval fields — derived from the blob path at ingest time.
+        # These power the build_retrieval_scope() function in the orchestration layer,
+        # enabling device-first search with deterministic shared-doc fallback.
+        SimpleField(name="scope", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="device_family", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="device", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="doc_type", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="topic", type=SearchFieldDataType.String, filterable=True, retrievable=True),
+        SimpleField(name="version", type=SearchFieldDataType.String, filterable=True, retrievable=True),
+        SimpleField(name="is_shared", type=SearchFieldDataType.Boolean, filterable=True),
+        # Structured tables extracted by Document Intelligence, stored as JSON.
+        # AI Search can't nest Collection(ComplexType) deeply enough for our
+        # `[{page, headers[], rows[][]}]` shape, so we serialize. Marked
+        # searchable so BM25 still indexes header/cell text — that's how a
+        # query like "max operating temperature" reaches a spec table.
+        SearchableField(name="tables_json", type=SearchFieldDataType.String, retrievable=True),
+        # Figures (PNG crops uploaded to the kb-figures container) — JSON
+        # list of `{figure_id, page, blob_url, caption}`. Caption is filled
+        # in by the optional vision pre-pass and IS searchable so a query
+        # for "control panel buttons" can hit a figure-only chunk.
+        SearchableField(name="figures_json", type=SearchFieldDataType.String, retrievable=True),
     ]
 
     vector_search = VectorSearch(

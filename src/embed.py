@@ -8,11 +8,11 @@ DefaultAzureCredential, deployments resolved by the project's connections).
 
 If `AZURE_AI_FOUNDRY_PROJECT_ENDPOINT` is unset, falls back to a direct
 AzureOpenAI client against `AZURE_OPENAI_ENDPOINT` with the API key.
-This matters for: (a) running notebooks/CLI before the Foundry role
-assignment has propagated, (b) eval pipelines that prefer key auth.
+This matters for running notebooks/CLI before the Foundry role
+assignment has propagated.
 
 Both code paths return objects with the same `.chat` / `.embeddings` API,
-so callers (generate.py, agent.py, eval_harness.py) need no changes.
+so callers (generate.py, agent.py, ingest.py) need no changes.
 """
 
 from __future__ import annotations

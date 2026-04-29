@@ -1,0 +1,25 @@
+relative_path,device_family,model,doc_type,vendor,topic,version,is_shared,status
+data/devices/network_access/meraki_mx67/manuals/MX67_MX68 Installation Guide.pdf,network_access,meraki_mx67,manual,Cisco Meraki,mx67-mx68-installation-guide,,false,ready
+data/devices/payment_terminal/ingenico_desk5000/manuals/Desk5000 and 3000 series - User guide.pdf,payment_terminal,ingenico_desk5000,manual,Ingenico,desk5000-and-3000-series-user-guide,,false,ready
+data/devices/check_scanner/canon_cr120/manuals/CR-150_CR-120_User_Manual_EN.pdf,check_scanner,canon_cr120,manual,Canon,cr-150-cr-120-user-manual-en,,false,ready
+data/devices/receipt_printer/epson_tm_m30ii/manuals/tm-m30ii_trg_en_reva.pdf,receipt_printer,epson_tm_m30ii,manual,Epson,tm-m30ii-trg-en-reva,,false,ready
+data/devices/network_access/meraki_mx67/troubleshooting/quick_start.md,network_access,meraki_mx67,troubleshooting,Cisco Meraki,quick-start,,false,ready
+data/devices/network_access/meraki_mx67/troubleshooting/wan_setup_and_led_reference.md,network_access,meraki_mx67,troubleshooting,Cisco Meraki,wan-setup-and-led-reference,,false,ready
+data/devices/network_access/meraki_mx67/troubleshooting/common_issues.md,network_access,meraki_mx67,troubleshooting,Cisco Meraki,common-issues,,false,ready
+data/devices/network_access/meraki_mx67/policies/manufacturer_constraints.md,network_access,meraki_mx67,policy,Cisco Meraki,manufacturer-constraints,,false,ready
+data/devices/payment_terminal/ingenico_desk5000/troubleshooting/quick_start.md,payment_terminal,ingenico_desk5000,troubleshooting,Ingenico,quick-start,,false,ready
+data/devices/payment_terminal/ingenico_desk5000/troubleshooting/paper_and_card_issues.md,payment_terminal,ingenico_desk5000,troubleshooting,Ingenico,paper-and-card-issues,,false,ready
+data/devices/payment_terminal/ingenico_desk5000/troubleshooting/common_issues.md,payment_terminal,ingenico_desk5000,troubleshooting,Ingenico,common-issues,,false,ready
+data/devices/payment_terminal/ingenico_desk5000/policies/manufacturer_constraints.md,payment_terminal,ingenico_desk5000,policy,Ingenico,manufacturer-constraints,,false,ready
+data/devices/check_scanner/canon_cr120/troubleshooting/setup_and_connection.md,check_scanner,canon_cr120,troubleshooting,Canon,setup-and-connection,,false,ready
+data/devices/check_scanner/canon_cr120/troubleshooting/scan_feed_and_jam_issues.md,check_scanner,canon_cr120,troubleshooting,Canon,scan-feed-and-jam-issues,,false,ready
+data/devices/check_scanner/canon_cr120/troubleshooting/maintenance_checklist.md,check_scanner,canon_cr120,troubleshooting,Canon,maintenance-checklist,,false,ready
+data/devices/check_scanner/canon_cr120/policies/manufacturer_constraints.md,check_scanner,canon_cr120,policy,Canon,manufacturer-constraints,,false,ready
+data/devices/receipt_printer/epson_tm_m30ii/troubleshooting/quick_start.md,receipt_printer,epson_tm_m30ii,troubleshooting,Epson,quick-start,,false,ready
+data/devices/receipt_printer/epson_tm_m30ii/troubleshooting/paper_and_connection_issues.md,receipt_printer,epson_tm_m30ii,troubleshooting,Epson,paper-and-connection-issues,,false,ready
+data/devices/receipt_printer/epson_tm_m30ii/troubleshooting/status_and_led_reference.md,receipt_printer,epson_tm_m30ii,troubleshooting,Epson,status-and-led-reference,,false,ready
+data/devices/receipt_printer/epson_tm_m30ii/policies/manufacturer_constraints.md,receipt_printer,epson_tm_m30ii,policy,Epson,manufacturer-constraints,,false,ready
+data/shared/policies/customer_data_storage.txt,,,policy,Internal,customer-data-storage,,true,ready
+data/shared/policies/data_retention.txt,,,policy,Internal,data-retention,,true,ready
+data/shared/policies/firmware_update_window.txt,,,policy,Internal,firmware-update-window,,true,ready
+data/shared/policies/third_party_software.txt,,,policy,Internal,third-party-software,,true,ready
