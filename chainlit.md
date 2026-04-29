@@ -1,18 +1,30 @@
-# Azure Observable RAG
+# Retail IT Support Assistant
 
-Ask anything about your indexed knowledge base. Each query is processed through six explicit LangGraph steps — **Intent Detection → Query Planning → Retrieval → Evidence Selection → Generation → Final Answer** — and the trace from each step renders live in the Chain-of-Thought panel above the answer.
+Your AI-powered help desk for in-store hardware and IT policy questions. Ask about setup, troubleshooting, error codes, or company policies — answers are grounded in the official manuals, troubleshooting guides, and policy documents for your devices.
 
-Every claim in the final answer is grounded in retrieved chunks and cited back to the source file + page.
+## Devices covered
 
-## Try
+| Device | Family |
+|--------|--------|
+| Epson TM-M30II | Receipt printer |
+| Ingenico Desk5000 | Payment terminal |
+| Canon CR-120 | Check scanner |
+| Meraki MX67 | Network appliance |
 
-- *How do I factory-reset Device A?*
-- *What's the maximum operating temperature for Device B?*
-- *What does error 101 mean and how do I fix it?*
-- *What's our policy on storing customer payment data?*
+## Try asking
 
-Out-of-scope queries (e.g. *"tell me a joke"*) short-circuit through the conditional edge in the graph — no LLM cost, ~1 ms response.
+- *The receipt printer is showing a red LED — what does that mean?*
+- *How do I load paper in the Epson TM-M30II?*
+- *The Ingenico terminal froze during a transaction — how do I recover it?*
+- *A card isn't reading on the Desk5000 — what should I check?*
+- *How do I connect the Canon CR-120 to a new PC?*
+- *What's our policy on installing third-party software on store devices?*
+- *When are firmware updates allowed to run?*
 
-## Browse the corpus
+## How it works
 
-Type **`files`** to see every document indexed (and any blob uploaded but not yet ingested). Cited sources also auto-attach to each answer — click the file card under the answer to open the original PDF / MD / TXT in the side panel and verify the citation.
+Every query runs through six live steps — **Intent → Scope → Search → Evidence → Generate → Answer** — visible in the Chain-of-Thought panel above each response. Answers cite the exact source file and page so you can verify any claim.
+
+## Browse the knowledge base
+
+Type **`files`** to see all indexed documents. Cited sources auto-attach to each answer — click a file card to open the original PDF or guide in the side panel.

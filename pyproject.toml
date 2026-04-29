@@ -1,0 +1,54 @@
+[project]
+name = "azure-observable-rag"
+version = "0.1.0"
+description = "Azure Observable RAG — typed-trace LangGraph pipeline over Azure AI Search + AI Foundry"
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    # --- Azure SDKs ---
+    "azure-identity>=1.19.0",
+    "azure-storage-blob>=12.23.0",
+    "azure-search-documents>=11.5.2,<12",
+    "azure-ai-documentintelligence>=1.0.0",
+    "azure-ai-projects>=1.0.0b10",
+    "azure-ai-contentsafety>=1.0.0",
+    "azure-monitor-opentelemetry>=1.6.9",
+    "openai>=1.54.0,<2",
+
+    # --- Document parsing & chunking ---
+    "tiktoken>=0.8.0",
+    "langchain-text-splitters>=0.3.0,<0.4",
+
+    # --- LangGraph orchestration ---
+    "langgraph>=0.2.50,<0.3",
+    "langchain-openai>=0.2.10,<0.3",
+    "langchain-core>=0.3.20,<0.4",
+
+    # --- Frontends ---
+    "chainlit>=2.11,<3",
+    "typer>=0.13.0",
+    "rich>=13.9.0",
+    "prompt_toolkit>=3.0.40",
+
+    # --- Notebooks & utilities ---
+    "jupyter>=1.1.0",
+    "pandas>=2.2.0",
+    "python-dotenv>=1.0.1",
+
+    # --- Figure extraction (PDF → PNG crops in figures.py) ---
+    "pypdfium2>=4.30.0",
+
+    "pydantic>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"

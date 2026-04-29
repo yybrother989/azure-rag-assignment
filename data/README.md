@@ -1,17 +1,65 @@
-# Sample Documents
+# Corpus Layout
 
-Drop ~10 documents into the folders below before running ingestion. The folder name maps 1:1 to the chunk's `category` field in the AI Search index, which the LangGraph router uses to scope retrieval.
+This repo now uses a locked metadata-first corpus contract.
 
-```
+```text
 data/
-  manuals/          # PDF — product manuals (digital or scanned)
-  troubleshooting/  # Markdown — error / fix guides
-  policies/         # Plain text — org policies
+  devices/
+    network_access/
+      meraki_mx67/
+        manuals/
+        troubleshooting/
+        policies/
+    payment_terminal/
+      ingenico_desk5000/
+        manuals/
+        troubleshooting/
+        policies/
+    check_scanner/
+      canon_cr120/
+        manuals/
+        troubleshooting/
+        policies/
+    receipt_printer/
+      epson_tm_m30ii/
+        manuals/
+        troubleshooting/
+        policies/
+  shared/
+    manuals/
+    troubleshooting/
+    policies/
 ```
 
-The ingestion pipeline (`python -m src.cli ingest`) will:
-1. Upload everything under `data/` to the `kb-docs` blob container, preserving folder structure
-2. Extract text via Docling (or Doc Intelligence, if `OCR_BACKEND=azure_di`)
-3. Chunk with Docling's structure-aware `HybridChunker`
-4. Embed each chunk with `text-embedding-3-small`
-5. Upsert into the `kb-chunks` Azure AI Search index (idempotent — re-runs are safe)
+## Invariants
+
+1. Only `devices/` and `shared/` exist at the top level.
+2. Device identity is always `{device_family}/{model}`.
+3. `doc_type` folders are fixed to `manuals`, `troubleshooting`, or `policies`.
+4. File names carry topic/version identity, not routing identity.
+5. Cross-device material belongs under `shared/`; device-specific material belongs under `devices/`.
+
+## Path Mapping
+
+The ingestion pipeline derives retrieval metadata directly from the path:
+
+- `devices/{device_family}/{model}/{doc_type}/{filename}`
+  - `scope=device`
+  - `device_family={device_family}`
+  - `device={model}`
+  - `doc_type={manual|troubleshooting|policy}`
+  - `is_shared=false`
+
+- `shared/{doc_type}/{filename}`
+  - `scope=shared`
+  - `device_family=None`
+  - `device=None`
+  - `doc_type={manual|troubleshooting|policy}`
+  - `is_shared=true`
+
+## Current In-Scope Devices
+
+- `network_access / meraki_mx67`
+- `payment_terminal / ingenico_desk5000`
+- `check_scanner / canon_cr120`
+- `receipt_printer / epson_tm_m30ii`

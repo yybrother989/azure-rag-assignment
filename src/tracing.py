@@ -25,12 +25,28 @@ from .search import RetrievalResult
 @dataclass
 class QueryPlanTrace:
     original_query: str
-    intent: str                       # manual_lookup | troubleshoot | policy_check | general_kb | out_of_scope
-    rewritten_query: str
-    filters: dict[str, Any]
+    # Two-route classification ------------------------------------------------
+    route: str                      # "NO_RETRIEVAL" | "SIMPLE_RAG"
+    router_reason: str              # one-sentence rationale from the router LLM
+    query_type: str                 # "troubleshoot" | "manual_lookup" | "policy_check"
+                                    # | "general_kb" | "conceptual"
+    detected_device_family: str | None
+    detected_device: str | None     # e.g. "deviceA"; None if not mentioned
+    detected_doc_type: str | None   # "manual" | "troubleshooting" | "policy" | None
+    detected_topic: str | None      # key topic from query, e.g. "error101"
+    detected_error_code: str | None # explicit error code, e.g. "error101"
+    allow_shared_fallback: bool     # whether shared docs are a valid fallback
+    # Retrieval scope (populated by build_retrieval_scope node) ---------------
+    primary_filter: dict[str, Any]  # OData-ready filter dict for primary search
+    fallback_filter: dict[str, Any] | None  # filter for shared-doc fallback search
     search_mode: str
     top_k: int
     notes: str | None = None
+    # Legacy aliases kept so existing eval harness code that reads `intent`,
+    # `rewritten_query`, and `filters` from FinalRagTrace dicts still works.
+    intent: str = ""                # set to query_type for backward compat
+    rewritten_query: str = ""       # set to original_query for backward compat
+    filters: dict[str, Any] = field(default_factory=dict)  # set to primary_filter
 
 
 @dataclass
@@ -40,6 +56,7 @@ class RetrievalTrace:
     search_mode: str
     results: list[RetrievalResult]
     latency_ms: int
+    fallback_triggered: bool = False    # True when fallback filter was used
 
 
 @dataclass
