@@ -30,8 +30,8 @@ flowchart TB
     subgraph INGEST [" 📥 Ingestion (two execution paths · same src/ modules)"]
         direction TB
         blob[("Blob Storage<br/>kb-docs · kb-figures")]:::azure
-        funcApp[/"Function App<br/>kb-funcs-…<br/><i>blob_trigger → ingest_single</i>"/]:::azure
-        pipeline["extract → chunk → embed<br/><i>extract.py · chunk.py · figures.py · embed.py</i>"]:::code
+        funcApp[/"Function App<br/>kb-funcs-…<br/><i>blob_trigger → auto_ingest<br/>→ src.ingest.ingest_single</i>"/]:::azure
+        pipeline["extract → figures → chunk → embed<br/><i>extract.py · figures.py · chunk.py · embed.py</i>"]:::code
         blob -- "add/update event" --> funcApp
         funcApp -- "runs in Azure" --> pipeline
     end
