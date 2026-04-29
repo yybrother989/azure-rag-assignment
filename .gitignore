@@ -10,3 +10,4 @@ chainlit.db
 traces.jsonl
 .claude/
 .DS_Store
+.mcp.json
