@@ -438,23 +438,6 @@ Nodes that are not LLM calls (build_retrieval_scope, simple_rag_search, evidence
 | Function App (Y1 Consumption) | Pay-per-execution; idle = $0 | <$0.01 — only fires on blob writes |
 | Application Insights + Log Analytics | First 5 GB/month free, then ~$2.30/GB | Free tier covers the demo |
 
-The dominant cost is **AI Search Standard at ~$0.30/hour, billed continuously**. To stop the meter:
-
-```bash
-az group delete -n kb-rag-rg --yes --no-wait
-```
-
-To then fully release the AI Services subdomain (otherwise it stays soft-deleted for 48 hr):
-
-```bash
-az cognitiveservices account purge -g kb-rag-rg -n <ai-services-name> -l swedencentral
-az cognitiveservices account purge -g kb-rag-rg -n <doc-intel-name>   -l swedencentral
-```
-
-Cost-cutting alternatives (not used here):
-- Drop AI Search to **Basic SKU** (~$75/mo) — loses the L2 semantic ranker but keeps BM25 + vector
-- Use `gpt-4.1-mini` instead of `gpt-4o` (~10× cheaper per token) when a region has quota
-
 ## Reproducibility Checklist
 
 | Step | Command | Verifies |
