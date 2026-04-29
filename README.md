@@ -123,8 +123,6 @@ bash infra/deploy.sh kb-rag-rg swedencentral
 
 This creates: Blob Storage + `kb-docs` container, Azure AI Search (Standard SKU — required for the semantic ranker), an **Azure AI Foundry** AI Services account with `text-embedding-3-small` + `gpt-4o` deployments and a Foundry Project (`kb-rag-project`), and Azure Document Intelligence (env-switchable OCR fallback). The script also auto-grants the deployer the three RBAC roles needed for AAD-authed access (Storage Blob Data Contributor, Azure AI Developer, Cognitive Services User) and writes `.env` at the repo root.
 
-**Region choice:** `swedencentral` is what we verified end-to-end. `eastus2` works in principle and gives access to `gpt-4.1-mini` (200 K TPM GlobalStandard) but had transient AI-Services capacity issues during our build.
-
 ### 2. Install dependencies
 
 The project is managed with **[uv](https://docs.astral.sh/uv/)** — a fast, deterministic Python package manager. `pyproject.toml` is the source of truth; `uv.lock` pins every transitive package for reproducibility.
@@ -168,17 +166,6 @@ data/
 ```
 
 The current corpus (see [data/document_manifest.csv](data/document_manifest.csv)) ships four devices: `network_access/meraki_mx67`, `payment_terminal/ingenico_desk5000`, `check_scanner/canon_cr120`, `receipt_printer/epson_tm_m30ii`. The orchestration layer extracts `scope` (`device`/`shared`), `device_family`, `device` (the model identifier), `doc_type`, `topic`, `version`, and `is_shared` from the path at ingest time. These fields drive device-first retrieval scoping without any LLM call.
-
-**Legacy flat layout (still supported):**
-
-```
-data/
-  manuals/          # PDF (digital or scanned)
-  troubleshooting/  # Markdown
-  policies/         # Plain text
-```
-
-In the flat layout, `scope=device` and `device_family=device=None` — retrieval falls through to the unfiltered search automatically.
 
 ### 4. Ingest (first-time setup)
 
@@ -414,14 +401,16 @@ Nodes that are not LLM calls (build_retrieval_scope, simple_rag_search, evidence
 - Metadata fields (`scope`, `device_family`, `device`, `doc_type`, `topic`, `version`, `is_shared`) are derived deterministically from the blob path — no LLM extraction required. `device` is taken directly from the path segment (the model identifier in the canonical layout, e.g. `meraki_mx67`).
 - Embedding model is `text-embedding-3-small` (1536 dim). Swapping to `text-embedding-3-large` requires updating `EMBED_DIM` in `src/embed.py` and re-indexing.
 - The `intent_router` classifies queries into `NO_RETRIEVAL` or `SIMPLE_RAG`. The `query_type` sub-classification (`troubleshoot`, `manual_lookup`, `policy_check`, `general_kb`, `conceptual`) informs downstream filter construction.
-- Authentication for Azure Blob and Azure AI Foundry uses `DefaultAzureCredential` (RBAC). `deploy.sh` auto-grants the deployer **Storage Blob Data Contributor** on the storage account, and **Azure AI Developer** + **Cognitive Services User** on the AI Services / Content Safety / Document Intelligence accounts (the data-plane role for AAD-authed chat/embedding/CS calls). The Function App's system-assigned MSI gets the same set plus **Search Index Data Contributor**. Allow ~1 minute for role propagation before the first ingest or query. Azure AI Search and Document Intelligence also accept API keys as a fallback.
 - All resources live in one resource group, one region.
 
 ## Known Limitations
 
+- **Reproduction requires an active Azure subscription.** This project is Azure-native end-to-end (AI Search, AI Foundry, Document Intelligence, Content Safety, Application Insights, Function App). A fresh clone needs a working subscription with sufficient quota in the target region; the demo was built on an Azure **trial subscription**, which dictated the regional pin (`swedencentral`) and the use of Standard-tier AI Search (the trial blocked some larger SKUs / regions during the build).
+- **No LangGraph checkpointer is configured.** Conversation history lives in `MemorySaver` (in-process); restarting Chainlit / the CLI clears every prior turn. A production deployment should wire `langgraph.checkpoint.sqlite.SqliteSaver` or the Postgres equivalent so threads persist across restarts.
 - **Deletes are not auto-detected by the Function App.** Azure blob triggers fire only on add/update, not delete. After removing a blob, run `python scripts/sync.py` to clean up orphan chunks **and** their PNGs under `kb-figures/{stem}/`. Documented in [Scripts Reference](#scripts-reference).
-- **Conversation memory persists per session only.** `MemorySaver` is in-memory; restarting the process clears it.
 - **Figure crops live in a public-blob container.** `kb-figures` is `publicAccess: 'Blob'` so Chainlit can render `cl.Image(url=...)` directly. Acceptable for this demo because the figures came from docs we shipped; a production deployment should switch to SAS-signed URLs.
+- **No automated evaluation harness.** This iteration focuses on architecture and observability — there's no recall@k / groundedness / citation-correctness scoring. A gold-QA set + harness would be the next addition before claiming retrieval quality numbers.
+- **No cost monitoring or budget guardrails.** Subscription-level budget alerts and per-resource quota caps aren't wired up. AI Search Standard bills hourly while the resource group exists; a long-running deploy can rack up spend without surfacing in the app. Add an Azure budget + alert before leaving the resource group running unattended.
 
 ## Cost Posture
 
